@@ -26,7 +26,7 @@ import type { SubmitOutcome } from '../src/client/contract/input.ts'
 import { SessionInputShell } from '../src/client/input/facade.ts'
 import { $replaceDetectSpanWithText, $selectDetectSpan } from '../src/client/input/editor/span-map.ts'
 import type {
-  ComposerAttachment, ComposerAttachmentsOwnerProps, DraftFileUploads,
+  ComposerAttachment, ComposerAttachmentsOwnerProps, ComposerCameraOwnerProps, DraftFileUploads,
 } from '../src/client/contract/slots.ts'
 import type { DraftAttachmentId } from '../src/client/contract/input.ts'
 import { InputBar } from '../src/client/skeleton/InputBar.tsx'
@@ -1609,12 +1609,46 @@ describe('command launcher chrome and control seats', () => {
     // seat set is the contract).
     expect([...new Set(slotCalls.map(c => c.key))]).toEqual([
       'conversation.input.overlay', 'conversation.input.attachments',
-      'conversation.input.permission', 'conversation.input.plan', 'conversation.input.left',
+      'conversation.input.permission', 'conversation.input.plan',
+      'conversation.input.camera', 'conversation.input.left',
       'conversation.input.right', 'conversation.input.model',
       'conversation.composer.dock',
     ])
     expect(view.queryByLabelText('Plan mode')).toBeNull()
     expect(view.queryByLabelText('Model')).toBeNull()
+  })
+
+  it('keeps the mode chips after the add control', () => {
+    const { view } = bench({
+      permissionEntry: <i data-testid="permission-entry" />,
+      planEntry: <i data-testid="plan-entry" />,
+    })
+    const add = view.getByLabelText('添加文件或调用指令')
+    const follows = (node: HTMLElement) =>
+      (node.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_PRECEDING) !== 0
+    expect(follows(view.getByTestId('permission-entry'))).toBe(true)
+    expect(follows(view.getByTestId('plan-entry'))).toBe(true)
+  })
+
+  it('validates captured images through ordinary attachment intake and disables capture when locked', () => {
+    const addFiles = vi.fn(() => null)
+    const result = bench({ addFiles, imageLimits: {
+      maxImageBytes: 8, maxImagesPerMessage: 2, maxMessageImageBytes: 16,
+      maxImagePixels: 40_000_000, maxImageDimension: 2000, mediaTypes: ['image/jpeg'],
+    } })
+    const owner = result.slotCalls.find(call => call.key === 'conversation.input.camera')?.owner as ComposerCameraOwnerProps
+    expect(owner.disabled).toBe(false)
+    const image = new File([new ArrayBuffer(8)], 'camera.jpg', { type: 'image/jpeg' })
+    act(() => { owner.onAddFiles([image]) })
+    expect(addFiles).toHaveBeenCalledWith([image])
+    addFiles.mockClear()
+    act(() => { owner.onAddFiles([new File([new ArrayBuffer(9)], 'large.jpg', { type: 'image/jpeg' })]) })
+    expect(addFiles).not.toHaveBeenCalled()
+    expect(result.view.getByRole('alert').textContent).toContain('单张图片不能超过')
+    cleanup()
+    const locked = bench({ addFiles, disabled: true })
+    const lockedOwner = locked.slotCalls.find(call => call.key === 'conversation.input.camera')?.owner as ComposerCameraOwnerProps
+    expect(lockedOwner.disabled).toBe(true)
   })
 
   it('passes the textarea selection to the command menu launcher and reflects its expanded state', () => {

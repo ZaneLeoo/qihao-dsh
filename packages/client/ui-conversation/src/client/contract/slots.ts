@@ -72,6 +72,14 @@ export interface ComposerAttachmentsOwnerProps {
   dropLimits?: { readonly count: number; readonly size: string } | undefined
 }
 
+/** Browser camera intake handed to the optional attachment presentation plugin. */
+export interface ComposerCameraOwnerProps {
+  /** Whether camera capture may add an attachment to the current draft. */
+  disabled: boolean
+  /** Add the captured image through the composer's existing validation path. */
+  onAddFiles: (files: readonly File[]) => void
+}
+
 /**
  * One image inside a message record: a durable admitted reference, or the
  * local preview of a submission echo whose admission is still in flight.
@@ -201,6 +209,12 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
       kind: 'single'
       scope: 'session-maybe'
       owner: ComposerAttachmentsOwnerProps
+    }
+    /** Optional browser-camera trigger beside the resident attachment control. */
+    'conversation.input.camera': {
+      kind: 'single'
+      scope: 'session-maybe'
+      owner: ComposerCameraOwnerProps
     }
     /** Plan control inside the composer tool row. */
     'conversation.input.plan': { kind: 'single'; scope: 'session'; owner: InputControlOwnerProps }
@@ -389,7 +403,7 @@ export interface InputControlOwnerProps {
 export type ComposerBarProps =
   PropsRuntime<'conversation.composer.bar'>
   & PropsRenderSlots<
-    | 'conversation.input.attachments' | 'conversation.input.overlay'
+    | 'conversation.input.attachments' | 'conversation.input.camera' | 'conversation.input.overlay'
     | 'conversation.input.permission'
     | 'conversation.input.left' | 'conversation.input.plan'
     | 'conversation.input.right' | 'conversation.input.model'

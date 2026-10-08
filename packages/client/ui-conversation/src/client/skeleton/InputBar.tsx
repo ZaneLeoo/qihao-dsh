@@ -433,6 +433,10 @@ export const InputBar = memo(function InputBar({
               {sessionId === undefined ? null : renderSlot('conversation.input.permission', { locked })}
               {sessionId === undefined ? null : renderSlot('conversation.input.plan', { locked })}
             </div>
+            {renderSlot('conversation.input.camera', {
+              disabled: subagent !== null || locked || machineBusy || addFiles === undefined,
+              onAddFiles: intakeFiles,
+            })}
             {input === undefined || sessionId === undefined
               ? null
               : renderSlot('conversation.input.left', {})}
